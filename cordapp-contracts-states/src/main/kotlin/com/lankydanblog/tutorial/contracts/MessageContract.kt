@@ -10,6 +10,7 @@ class MessageContract : Contract {
 
     interface Commands : CommandData {
         class Send : TypeOnlyCommandData(), Commands
+        class Reply: TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -18,8 +19,10 @@ class MessageContract : Contract {
             is Commands.Send -> requireThat {
                 "No inputs should be consumed when sending a message." using (tx.inputs.isEmpty())
                 "Only one output state should be created when sending a message." using (tx.outputs.size == 1)
-                "Both send and recipient together only may sign IOU issue transaction." using
-                        (command.signers.toSet() == tx.outputStates.single().participants.map { it.owningKey }.toSet())
+            }
+            is Commands.Reply -> requireThat {
+                "One input should be consumed when replying to a message." using (tx.inputs.size == 1)
+                "Only one output state should be created when replying to a message." using (tx.outputs.size == 1)
             }
         }
     }

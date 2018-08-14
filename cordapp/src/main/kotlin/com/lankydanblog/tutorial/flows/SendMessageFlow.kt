@@ -2,6 +2,8 @@ package com.lankydanblog.tutorial.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.lankydanblog.tutorial.contracts.MessageContract
+import com.lankydanblog.tutorial.contracts.MessageContract.Commands.Reply
+import com.lankydanblog.tutorial.contracts.MessageContract.Commands.Send
 import net.corda.core.contracts.Command
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -9,70 +11,61 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import com.lankydanblog.tutorial.states.MessageState
+import net.corda.core.contracts.StateAndRef
 
 @InitiatingFlow
 @StartableByRPC
-class SendMessageFlow(private val message: MessageState) : FlowLogic<SignedTransaction>() {
-
-    private companion object {
-        object CREATING : ProgressTracker.Step("Creating")
-        object VERIFYING : ProgressTracker.Step("Verifying")
-        object SIGNING : ProgressTracker.Step("Signing")
-        object COUNTERPARTY : ProgressTracker.Step("Sending to Counterparty")
-        object FINALISING : ProgressTracker.Step("Finalising")
-
-        private fun tracker() = ProgressTracker(
-            CREATING,
-            VERIFYING,
-            SIGNING,
-            COUNTERPARTY,
-            FINALISING
-        )
-    }
-
-    override val progressTracker = tracker()
+class SendMessageFlow(private val message: MessageState, private val replyToMessage: StateAndRef<MessageState>? = null) :
+    FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
         val stx = collectSignature(verifyAndSign(transaction()))
-        progressTracker.currentStep = FINALISING
         return subFlow(FinalityFlow(stx))
     }
+
+//    @Suspendable
+//    private fun collectSignature(
+//        transaction: SignedTransaction
+//    ): SignedTransaction {
+//        return subFlow(CollectMessageSignaturesZ(transaction, initiateFlow(message.recipient)))
+//    }
 
     @Suspendable
     private fun collectSignature(
         transaction: SignedTransaction
     ): SignedTransaction {
-        val session = initiateFlow(message.recipient)
-        progressTracker.currentStep = COUNTERPARTY
-        return subFlow(CollectSignaturesFlow(transaction, listOf(session)))
+        return subFlow(CollectSignaturesFlow(transaction, listOf(initiateFlow(message.recipient))))
     }
 
     private fun verifyAndSign(transaction: TransactionBuilder): SignedTransaction {
-        progressTracker.currentStep = VERIFYING
         transaction.verify(serviceHub)
-        progressTracker.currentStep = SIGNING
         return serviceHub.signInitialTransaction(transaction)
     }
 
     private fun transaction() =
         TransactionBuilder(notary()).apply {
-            progressTracker.currentStep = CREATING
+            if(replyToMessage != null) {
+                addInputState(replyToMessage)
+            }
             addOutputState(message, MessageContract.CONTRACT_ID)
-            addCommand(
-                Command(
-                    MessageContract.Commands.Send(),
-                    message.participants.map(Party::owningKey)
-                )
-            )
+            addCommand(Command(command(), message.participants.map(Party::owningKey)))
         }
 
     private fun notary() = serviceHub.networkMapCache.notaryIdentities.first()
+
+    private fun command() = if (replyToMessage != null) Reply() else Send()
 }
 
-/**
- * This class responds to requests sent from the {@link TradeInputFlow}.
- */
+//@InitiatingFlow
+//class CollectMessageSignatures(private val transaction: SignedTransaction, private val session: FlowSession) :
+//    FlowLogic<SignedTransaction>() {
+//    @Suspendable
+//    override fun call(): SignedTransaction {
+//        return subFlow(CollectSignaturesFlow(transaction, listOf(session)))
+//    }
+//}
+
 @InitiatedBy(SendMessageFlow::class)
 class SendMessageResponder(val session: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
