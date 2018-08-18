@@ -11,7 +11,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 
 @CordaService
-class MessageRepository(/*private val serviceHub: AppServiceHub*/) : SingletonSerializeAsToken() {
+class MessageRepository(private val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
 
     private companion object {
         val log = loggerFor<MessageRepository>()
@@ -22,6 +22,5 @@ class MessageRepository(/*private val serviceHub: AppServiceHub*/) : SingletonSe
     }
 
     fun findAll(pageSpec: PageSpecification): Vault.Page<MessageState> =
-        Vault.Page(emptyList(), emptyList(), 0, Vault.StateStatus.CONSUMED, emptyList())
-//        serviceHub.vaultService.queryBy(QueryCriteria.LinearStateQueryCriteria(), pageSpec)
+        serviceHub.vaultService.queryBy(QueryCriteria.LinearStateQueryCriteria(), pageSpec)
 }

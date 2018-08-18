@@ -24,13 +24,6 @@ class SendMessageFlow(private val message: MessageState, private val replyToMess
         return subFlow(FinalityFlow(stx))
     }
 
-//    @Suspendable
-//    private fun collectSignature(
-//        transaction: SignedTransaction
-//    ): SignedTransaction {
-//        return subFlow(CollectMessageSignaturesZ(transaction, initiateFlow(message.recipient)))
-//    }
-
     @Suspendable
     private fun collectSignature(
         transaction: SignedTransaction
@@ -56,15 +49,6 @@ class SendMessageFlow(private val message: MessageState, private val replyToMess
 
     private fun command() = if (replyToMessage != null) Reply() else Send()
 }
-
-//@InitiatingFlow
-//class CollectMessageSignatures(private val transaction: SignedTransaction, private val session: FlowSession) :
-//    FlowLogic<SignedTransaction>() {
-//    @Suspendable
-//    override fun call(): SignedTransaction {
-//        return subFlow(CollectSignaturesFlow(transaction, listOf(session)))
-//    }
-//}
 
 @InitiatedBy(SendMessageFlow::class)
 class SendMessageResponder(val session: FlowSession) : FlowLogic<Unit>() {

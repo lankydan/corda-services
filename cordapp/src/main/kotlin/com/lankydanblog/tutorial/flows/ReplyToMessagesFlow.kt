@@ -15,9 +15,6 @@ import net.corda.core.transactions.SignedTransaction
 @StartableByRPC
 class ReplyToMessagesFlow : FlowLogic<List<SignedTransaction>>() {
 
-    // cannot inject the service in the constructor, has to be called from the `call` function in some way
-//    private val repository = serviceHub.cordaService(MessageRepository::class.java)
-
     @Suspendable
     override fun call(): List<SignedTransaction> {
         return messages().map { reply(it) }

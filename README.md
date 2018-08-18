@@ -1,6 +1,6 @@
-# Spring WebFlux and Corda
+# Corda Services
 
-This project uses Spring WebFlux to stream the progress of a simple flow and updates of states that are saved to the vault.
+This project focuses on using a Corda service inside of a Flow. The blog post written with this code contains extra information that the code does not contain.
 
 # Structure:
 
